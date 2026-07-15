@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Particle Synth</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #030310;
+            color: #fff;
+            font-family: sans-serif;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at center, #080a25 0%, #010208 100%);
+        }
+        
+        #settings-toggle {
+            display: none;
+            position: absolute;
+            bottom: 25px;
+            right: 20px;
+            background: rgba(10, 15, 30, 0.85);
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 12px 18px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        .panel {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(10, 15, 30, 0.85);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 240, 255, 0.1);
+            width: 280px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        #close-panel-btn {
+            display: none;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #0a0f1e;
+            color: #b0c4de;
+            border: 1px solid #b0c4de;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            position: sticky;
+            top: -10px;
+            z-index: 100;
+        }
+
+        .panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .panel::-webkit-scrollbar-thumb {
+            background: #00f0ff;
+            border-radius: 3px;
+        }
+        #btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            background: #00a8ff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            box-shadow: 0 0 15px rgba(0, 168, 255, 0.5);
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+            transition: 0.3s;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        #btn:hover {
+            background: #00f0ff;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.8);
+            transform: scale(1.05);
+        }
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #00f0ff;
+            padding-bottom: 8px;
+            color: #00f0ff;
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+            letter-spacing: 1px;
+        }
+        .control-group {
+            margin-bottom: 18px;
+        }
+        .control-group label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #b0c4de;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            accent-color: #00f0ff;
+        }
+        .control-row input[type="color"] {
+            border: none;
+            width: 40px;
+            height: 25px;
+            cursor: pointer;
+            background: none;
+        }
+        .value-display {
+            font-size: 12px;
+            color: #00f0ff;
+            min-width: 40px;
+            text-align: right;
+            font-family: monospace;
+            text-shadow: 0 0 5px rgba(0, 240, 255, 0.4);
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            background: #0c1020;
+            color: #fff;
+            border: 1px solid #00a8ff;
+            border-radius: 4px;
+            outline: none;
+            font-size: 14px;
+        }
+        select:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+        }
+        .separator {
+            height: 1px;
+            background: rgba(0, 240, 255, 0.2);
+            margin: 20px 0;
+        }
+
+        #waveformCanvas {
+            width: 100%;
+            height: 60px;
+            background: #050a15;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 5px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            #settings-toggle {
+                display: block;
+            }
+            #close-panel-btn {
+                display: block;
+            }
+            .panel {
+                top: auto;
+                bottom: 0;
+                right: 0;
+                transform: translateY(100%);
+                width: 100%;
+                max-width: 100%;
+                padding: 20px 20px 40px 20px;
+                max-height: 75dvh;
+                border-radius: 20px 20px 0 0;
+                box-sizing: border-box;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
+                
+                opacity: 0;
+                pointer-events: none;
+                visibility: hidden;
+            }
+            .panel.show {
+                opacity: 1;
+                pointer-events: auto;
+                visibility: visible;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+    
+    <button id="settings-toggle">きめる</button>
+
+    <div class="panel" id="control-panel">
+        <button id="close-panel-btn">とじる</button>
+        <button id="btn">はじめる</button>
+        
+        <canvas id="waveformCanvas" width="280" height="60"></canvas>
+        
+        <h3></h3>
+
+        <div class="control-group">
+            <label>枠の形</label>
+            <select id="boundaryShape">
+                <option value="circle" selected>Circle</option>
+                <option value="square">Square</option>
+                <option value="none">？</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>枠のサイズ</label>
+            <div class="control-row">
+                <input type="range" id="boundarySize" min="50" max="400" step="1" value="260">
+                <span class="value-display" id="boundarySizeVal">260</span>
+            </div>
+        </div>
+
+        <div class="separator"></div>
+        
+        <div class="control-group">
+            <label>音色 (Wave Type)</label>
+            <select id="waveType">
+                <option value="water" selected>water?</option>
+                <option value="sine">sine</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">sawtooth</option>
+                <option value="square">square</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>音階 (Musical Scale)</label>
+            <select id="scaleType">
+                <option value="pentatonic" selected>ペンタトニック</option>
+                <option value="ryukyu">琉球音階</option>
+                <option value="miyako">都節</option>
+                <option value="major">メジャー</option>
+                <option value="minor">マイナー</option>
+                <option value="continuous">指定なし・ランダム</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>基準の音高 (Base Pitch)</label>
+            <div class="control-row">
+                <input type="range" id="basePitch" min="36" max="84" step="1" value="48">
+                <span class="value-display" id="basePitchVal">48</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>音域の広さ (Octaves)</label>
+            <div class="control-row">
+                <input type="range" id="octaves" min="1" max="5" step="1" value="3">
+                <span class="value-display" id="octavesVal">3</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>小さい粒子の数 (高音)</label>
+            <div class="control-row">
+                <input type="range" id="smallParticleCount" min="0" max="100" step="1" value="10">
+                <span class="value-display" id="smallParticleCountVal">10</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>大きい粒子の数 (低音)</label>
+            <div class="control-row">
+                <input type="range" id="largeParticleCount" min="0" max="100" step="1" value="10">
+                <span class="value-display" id="largeParticleCountVal">10</span>
+            </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <div class="control-group">
+            <label>運動スピード (Speed)</label>
+            <div class="control-row">
+                <input type="range" id="speed" min="0.1" max="3.0" step="0.1" value="1.0">
+                <span class="value-display" id="speedVal">1.0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>重力 (Gravity)</label>
+            <div class="control-row">
+                <input type="range" id="gravity" min="0" max="0.3" step="0.01" value="0.00">
+                <span class="value-display" id="gravityVal">0.00</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>跳ね返り係数 (Bounce)</label>
+            <div class="control-row">
+                <input type="range" id="bounce" min="0.5" max="1.0" step="0.01" value="1.00">
+                <span class="value-display" id="bounceVal">1.00</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>基本音量 (Volume)</label>
+            <div class="control-row">
+                <input type="range" id="volume" min="0.01" max="0.2" step="0.01" value="0.08">
+                <span class="value-display" id="volumeVal">0.08</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>音の余韻秒数 (Duration)</label>
+            <div class="control-row">
+                <input type="range" id="duration" min="0.05" max="1.0" step="0.01" value="0.70">
+                <span class="value-display" id="durationVal">0.70</span>
+            </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <div class="control-group">
+            <label>高音のカラー（小さい粒子）</label>
+            <div class="control-row">
+                <input type="color" id="colorHigh" value="#00ffff">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>低音のカラー（大きい粒子）</label>
+            <div class="control-row">
+                <input type="color" id="colorLow" value="#0055ff">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            BOUNDARY_SHAPE: 'circle',
+            BOUNDARY_SIZE: 260,       
+            SMALL_PARTICLE_COUNT: 10,
+            LARGE_PARTICLE_COUNT: 10,
+            MIN_RADIUS: 4,  
+            MAX_RADIUS: 18, 
+            SPEED_MULTIPLIER: 1.0, 
+            GRAVITY: 0.00,
+            BOUNCE: 1.00,
+            BASE_VOLUME: 0.08,
+            WAVE_TYPE: 'water',
+            SCALE_TYPE: 'pentatonic',
+            BASE_PITCH: 48, 
+            OCTAVES: 3,     
+            SOUND_DURATION: 0.70,
+            COLOR_HIGH: '#00ffff',
+            COLOR_LOW: '#0055ff'
+        };
+
+        const SCALES = {
+            pentatonic: [0, 2, 4, 7, 9],
+            ryukyu: [0, 4, 5, 7, 11],
+            miyako: [0, 2, 3, 7, 8],
+            major: [0, 2, 4, 5, 7, 9, 11],
+            minor: [0, 2, 3, 5, 7, 8, 10],
+            continuous: null
+        };
+
+        function getFrequencyForFactor(factor) {
+            if (CONFIG.SCALE_TYPE === 'continuous') {
+                const baseFreq = 440 * Math.pow(2, (CONFIG.BASE_PITCH - 69) / 12);
+                const topFreq = 440 * Math.pow(2, (CONFIG.BASE_PITCH + CONFIG.OCTAVES * 12 - 69) / 12);
+                return baseFreq + (1 - factor) * (topFreq - baseFreq); 
+            }
+            const scale = SCALES[CONFIG.SCALE_TYPE];
+            const availableNotes = [];
+            for (let oct = 0; oct < CONFIG.OCTAVES; oct++) {
+                for (let i = 0; i < scale.length; i++) {
+                    availableNotes.push(CONFIG.BASE_PITCH + oct * 12 + scale[i]);
+                }
+            }
+            const invertedFactor = 1 - factor;
+            const index = Math.max(0, Math.min(availableNotes.length - 1, Math.floor(invertedFactor * availableNotes.length)));
+            const midiNote = availableNotes[index];
+            return 440 * Math.pow(2, (midiNote - 69) / 12);
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('btn');
+        const settingsToggle = document.getElementById('settings-toggle');
+        const panel = document.getElementById('control-panel');
+        const closePanelBtn = document.getElementById('close-panel-btn');
+        
+        const waveCanvas = document.getElementById('waveformCanvas');
+        const waveCtx = waveCanvas.getContext('2d');
+        let analyser = null;
+        let masterGain = null;
+        let dataArray = null;
+        let bufferLength = 0;
+
+        let audioCtx = null;
+        let isPlaying = false;
+        const particles = [];
+        let centerX, centerY;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+
+            // スマホ画面幅に合わせて枠の大きさを自動調整する安全なロジックを追加
+            if (canvas.width > 0 && canvas.height > 0) {
+                const minDimension = Math.min(canvas.width, canvas.height);
+                const safeMaxBoundary = Math.max(50, Math.floor((minDimension / 2) - 20));
+
+                const boundarySizeInput = document.getElementById('boundarySize');
+                if (boundarySizeInput) {
+                    boundarySizeInput.max = safeMaxBoundary;
+
+                    if (CONFIG.BOUNDARY_SIZE > safeMaxBoundary) {
+                        CONFIG.BOUNDARY_SIZE = safeMaxBoundary;
+                        boundarySizeInput.value = safeMaxBoundary;
+                        
+                        const valDisplay = document.getElementById('boundarySizeVal');
+                        if (valDisplay) valDisplay.textContent = safeMaxBoundary;
+                        
+                        if (particles.length > 0) setupParticles();
+                    }
+                }
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas); // 初期化のタイミング遅れを防ぐため追加
+        resizeCanvas();
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            const c1 = hexToRgb(color1);
+            const c2 = hexToRgb(color2);
+            const r = Math.round(c1.r + factor * (c2.r - c1.r));
+            const g = Math.round(c1.g + factor * (c2.g - c1.g));
+            const b = Math.round(c1.b + factor * (c2.b - c1.b));
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            masterGain = audioCtx.createGain();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048; 
+            bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            masterGain.connect(analyser);
+            analyser.connect(audioCtx.destination);
+        }
+
+        class Particle {
+            constructor(x, y, type) {
+                if (type === 'small') {
+                    this.r = CONFIG.MIN_RADIUS + Math.random() * 4; 
+                } else {
+                    this.r = CONFIG.MAX_RADIUS - Math.random() * 6; 
+                }
+                
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4 * CONFIG.SPEED_MULTIPLIER;
+                this.vy = (Math.random() - 0.5) * 4 * CONFIG.SPEED_MULTIPLIER;
+                this.mass = this.r; 
+                
+                this.factor = (this.r - CONFIG.MIN_RADIUS) / (CONFIG.MAX_RADIUS - CONFIG.MIN_RADIUS);
+                this.updateFrequency();
+
+                this.isColliding = false;
+                this.lastSoundTime = 0; 
+            }
+
+            updateFrequency() {
+                this.freq = getFrequencyForFactor(this.factor);
+            }
+
+            update() {
+                this.vy += CONFIG.GRAVITY;
+                this.x += this.vx;
+                this.y += this.vy;
+
+                let hitBoundary = false;
+
+                if (CONFIG.BOUNDARY_SHAPE === 'circle') {
+                    const dx = this.x - centerX;
+                    const dy = this.y - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist + this.r > CONFIG.BOUNDARY_SIZE) {
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        const dot = this.vx * nx + this.vy * ny;
+                        this.vx = (this.vx - 2 * dot * nx) * CONFIG.BOUNCE;
+                        this.vy = (this.vy - 2 * dot * ny) * CONFIG.BOUNCE;
+                        this.x = centerX + nx * (CONFIG.BOUNDARY_SIZE - this.r);
+                        this.y = centerY + ny * (CONFIG.BOUNDARY_SIZE - this.r);
+                        hitBoundary = true;
+                    }
+                } else if (CONFIG.BOUNDARY_SHAPE === 'square') {
+                    if (this.x - this.r < centerX - CONFIG.BOUNDARY_SIZE) {
+                        this.x = centerX - CONFIG.BOUNDARY_SIZE + this.r;
+                        this.vx = Math.abs(this.vx) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    } else if (this.x + this.r > centerX + CONFIG.BOUNDARY_SIZE) {
+                        this.x = centerX + CONFIG.BOUNDARY_SIZE - this.r;
+                        this.vx = -Math.abs(this.vx) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    }
+
+                    if (this.y - this.r < centerY - CONFIG.BOUNDARY_SIZE) {
+                        this.y = centerY - CONFIG.BOUNDARY_SIZE + this.r;
+                        this.vy = Math.abs(this.vy) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    } else if (this.y + this.r > centerY + CONFIG.BOUNDARY_SIZE) {
+                        this.y = centerY + CONFIG.BOUNDARY_SIZE - this.r;
+                        this.vy = -Math.abs(this.vy) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    }
+                } else if (CONFIG.BOUNDARY_SHAPE === 'none') {
+                    if (this.x - this.r < 0) {
+                        this.x = this.r;
+                        this.vx = Math.abs(this.vx) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    } else if (this.x + this.r > canvas.width) {
+                        this.x = canvas.width - this.r;
+                        this.vx = -Math.abs(this.vx) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    }
+
+                    if (this.y - this.r < 0) {
+                        this.y = this.r;
+                        this.vy = Math.abs(this.vy) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    } else if (this.y + this.r > canvas.height) {
+                        this.y = canvas.height - this.r;
+                        this.vy = -Math.abs(this.vy) * CONFIG.BOUNCE;
+                        hitBoundary = true;
+                    }
+                }
+
+                if (hitBoundary && isPlaying && audioCtx) {
+                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    const normalizedSpeed = speed / CONFIG.SPEED_MULTIPLIER;
+                    const now = audioCtx.currentTime;
+                    
+                    if (normalizedSpeed > 0.5 && now - this.lastSoundTime > 0.05) {
+                        triggerSound(this.freq, this.x, normalizedSpeed, 0.4);
+                        this.lastSoundTime = now;
+                    }
+                }
+            }
+
+            draw() {
+                const color = interpolateColor(CONFIG.COLOR_HIGH, CONFIG.COLOR_LOW, this.factor);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = this.isColliding ? '#ffffff' : color;
+                ctx.shadowBlur = this.isColliding ? 15 : 0;
+                ctx.shadowColor = '#ffffff';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                this.isColliding = false;
+            }
+        }
+
+        function handleParticleCollisions() {
+            const now = audioCtx ? audioCtx.currentTime : 0;
+
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p1 = particles[i];
+                    const p2 = particles[j];
+
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < p1.r + p2.r) {
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        const kx = p1.vx - p2.vx;
+                        const ky = p1.vy - p2.vy;
+                        const p = 2 * (nx * kx + ny * ky) / (p1.mass + p2.mass);
+
+                        const relativeSpeed = Math.abs(kx * nx + ky * ny);
+
+                        p1.vx -= p * p2.mass * nx * CONFIG.BOUNCE;
+                        p1.vy -= p * p2.mass * ny * CONFIG.BOUNCE;
+                        p2.vx += p * p1.mass * nx * CONFIG.BOUNCE;
+                        p2.vy += p * p1.mass * ny * CONFIG.BOUNCE;
+
+                        const overlap = (p1.r + p2.r) - dist;
+                        p1.x -= nx * overlap * 0.5;
+                        p1.y -= ny * overlap * 0.5;
+                        p2.x += nx * overlap * 0.5;
+                        p2.y += ny * overlap * 0.5;
+
+                        p1.isColliding = true;
+                        p2.isColliding = true;
+
+                        const normalizedRelativeSpeed = relativeSpeed / CONFIG.SPEED_MULTIPLIER;
+                        
+                        if (isPlaying && normalizedRelativeSpeed > 0.4 && audioCtx) {
+                            if (now - p1.lastSoundTime > 0.05) {
+                                triggerSound(p1.freq, p1.x, normalizedRelativeSpeed, 0.7);
+                                p1.lastSoundTime = now;
+                            }
+                            if (now - p2.lastSoundTime > 0.05) {
+                                triggerSound(p2.freq, p2.x, normalizedRelativeSpeed, 0.7);
+                                p2.lastSoundTime = now;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function triggerSound(freq, posX, intensity, modifier) {
+            if (!audioCtx) return;
+            if (!isFinite(freq) || freq <= 0) return;
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            const panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+
+            let rawVolume = intensity * CONFIG.BASE_VOLUME * modifier;
+            if (!isFinite(rawVolume)) rawVolume = 0.01;
+            const volume = Math.min(rawVolume, 0.4);
+
+            if (CONFIG.WAVE_TYPE === 'water') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq * 0.5, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(freq, audioCtx.currentTime + 0.05); 
+                
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume * 1.5, audioCtx.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + CONFIG.SOUND_DURATION);
+            } else {
+                osc.type = CONFIG.WAVE_TYPE;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.005);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + CONFIG.SOUND_DURATION);
+            }
+
+            if (panner) {
+                const panX = (posX - (canvas.width / 2)) / (canvas.width / 2);
+                panner.pan.setValueAtTime(panX, audioCtx.currentTime);
+                osc.connect(gainNode).connect(panner).connect(masterGain);
+            } else {
+                osc.connect(gainNode).connect(masterGain);
+            }
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + CONFIG.SOUND_DURATION);
+        }
+
+        function setupParticles() {
+            particles.length = 0;
+            
+            for (let i = 0; i < CONFIG.SMALL_PARTICLE_COUNT; i++) {
+                let x, y;
+                if (CONFIG.BOUNDARY_SHAPE === 'none') {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() * canvas.height;
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.random() * (CONFIG.BOUNDARY_SIZE - 20);
+                    x = centerX + r * Math.cos(angle);
+                    y = centerY + r * Math.sin(angle);
+                }
+                particles.push(new Particle(x, y, 'small'));
+            }
+            
+            for (let i = 0; i < CONFIG.LARGE_PARTICLE_COUNT; i++) {
+                let x, y;
+                if (CONFIG.BOUNDARY_SHAPE === 'none') {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() * canvas.height;
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.random() * (CONFIG.BOUNDARY_SIZE - 20);
+                    x = centerX + r * Math.cos(angle);
+                    y = centerY + r * Math.sin(angle);
+                }
+                particles.push(new Particle(x, y, 'large'));
+            }
+        }
+
+        function drawWaveform() {
+            waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+            
+            if (!analyser) return;
+
+            analyser.getByteTimeDomainData(dataArray);
+
+            waveCtx.lineWidth = 2;
+            waveCtx.strokeStyle = '#00f0ff';
+            waveCtx.beginPath();
+
+            const sliceWidth = waveCanvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * waveCanvas.height / 2;
+
+                if (i === 0) {
+                    waveCtx.moveTo(x, y);
+                } else {
+                    waveCtx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+
+            waveCtx.lineTo(waveCanvas.width, waveCanvas.height / 2);
+            waveCtx.stroke();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (CONFIG.BOUNDARY_SHAPE !== 'none') {
+                ctx.beginPath();
+                if (CONFIG.BOUNDARY_SHAPE === 'circle') {
+                    ctx.arc(centerX, centerY, CONFIG.BOUNDARY_SIZE, 0, Math.PI * 2);
+                } else if (CONFIG.BOUNDARY_SHAPE === 'square') {
+                    ctx.rect(centerX - CONFIG.BOUNDARY_SIZE, centerY - CONFIG.BOUNDARY_SIZE, CONFIG.BOUNDARY_SIZE * 2, CONFIG.BOUNDARY_SIZE * 2);
+                }
+                
+                // ★ 修正：枠線を太く・明るくしてネオン発光を追加（見えづらさを解消）
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(0, 240, 255, 0.8)';
+                ctx.stroke();
+                ctx.shadowBlur = 0; // リセット
+            }
+
+            handleParticleCollisions();
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            drawWaveform();
+
+            requestAnimationFrame(animate);
+        }
+
+        settingsToggle.addEventListener('click', () => {
+            panel.classList.add('show');
+            settingsToggle.style.display = 'none'; 
+        });
+
+        closePanelBtn.addEventListener('click', () => {
+            panel.classList.remove('show');
+            setTimeout(() => {
+                settingsToggle.style.display = 'block'; 
+            }, 300);
+        });
+
+        document.getElementById('boundaryShape').addEventListener('change', (e) => {
+            CONFIG.BOUNDARY_SHAPE = e.target.value;
+            setupParticles();
+        });
+
+        document.getElementById('boundarySize').addEventListener('input', (e) => {
+            CONFIG.BOUNDARY_SIZE = parseInt(e.target.value);
+            document.getElementById('boundarySizeVal').textContent = e.target.value;
+        });
+
+        document.getElementById('waveType').addEventListener('change', (e) => CONFIG.WAVE_TYPE = e.target.value);
+
+        document.getElementById('scaleType').addEventListener('change', (e) => {
+            CONFIG.SCALE_TYPE = e.target.value;
+            particles.forEach(p => p.updateFrequency());
+        });
+
+        document.getElementById('basePitch').addEventListener('input', (e) => {
+            CONFIG.BASE_PITCH = parseInt(e.target.value);
+            document.getElementById('basePitchVal').textContent = e.target.value;
+            particles.forEach(p => p.updateFrequency());
+        });
+
+        document.getElementById('octaves').addEventListener('input', (e) => {
+            CONFIG.OCTAVES = parseInt(e.target.value);
+            document.getElementById('octavesVal').textContent = e.target.value;
+            particles.forEach(p => p.updateFrequency());
+        });
+        
+        document.getElementById('smallParticleCount').addEventListener('input', (e) => {
+            CONFIG.SMALL_PARTICLE_COUNT = parseInt(e.target.value);
+            document.getElementById('smallParticleCountVal').textContent = e.target.value;
+            setupParticles();
+        });
+
+        document.getElementById('largeParticleCount').addEventListener('input', (e) => {
+            CONFIG.LARGE_PARTICLE_COUNT = parseInt(e.target.value);
+            document.getElementById('largeParticleCountVal').textContent = e.target.value;
+            setupParticles();
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            const newSpeed = parseFloat(e.target.value);
+            const ratio = newSpeed / CONFIG.SPEED_MULTIPLIER;
+            CONFIG.SPEED_MULTIPLIER = newSpeed;
+            particles.forEach(p => {
+                p.vx *= ratio;
+                p.vy *= ratio;
+            });
+            document.getElementById('speedVal').textContent = newSpeed.toFixed(1);
+        });
+
+        document.getElementById('gravity').addEventListener('input', (e) => {
+            CONFIG.GRAVITY = parseFloat(e.target.value);
+            document.getElementById('gravityVal').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        document.getElementById('bounce').addEventListener('input', (e) => {
+            CONFIG.BOUNCE = parseFloat(e.target.value);
+            document.getElementById('bounceVal').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        document.getElementById('volume').addEventListener('input', (e) => {
+            CONFIG.BASE_VOLUME = parseFloat(e.target.value);
+            document.getElementById('volumeVal').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        document.getElementById('duration').addEventListener('input', (e) => {
+            CONFIG.SOUND_DURATION = parseFloat(e.target.value);
+            document.getElementById('durationVal').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        document.getElementById('colorHigh').addEventListener('input', (e) => CONFIG.COLOR_HIGH = e.target.value);
+        document.getElementById('colorLow').addEventListener('input', (e) => CONFIG.COLOR_LOW = e.target.value);
+
+        btn.addEventListener('click', () => {
+            if (!audioCtx) {
+                initAudio();
+                setupParticles();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            isPlaying = !isPlaying;
+            btn.textContent = isPlaying ? "やすめる" : "はじめる";
+        });
+
+        waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        waveCtx.lineWidth = 2;
+        waveCtx.strokeStyle = '#00f0ff';
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, waveCanvas.height / 2);
+        waveCtx.lineTo(waveCanvas.width, waveCanvas.height / 2);
+        waveCtx.stroke();
+
+        animate();
+    </script>
+</body>
+</html>
