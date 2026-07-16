@@ -26,22 +26,28 @@
             background: radial-gradient(circle at center, #080a25 0%, #010208 100%);
         }
         
+        /* 「きめる」ボタンの主張を弱める */
         #settings-toggle {
             display: none;
             position: absolute;
             bottom: 25px;
             right: 20px;
-            background: rgba(10, 15, 30, 0.85);
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            padding: 12px 18px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: bold;
+            background: rgba(10, 15, 30, 0.5); /* 半透明で暗めに */
+            border: 1px solid #0088cc; /* 枠線を少し暗く */
+            color: #b0c4de; /* 文字色を控えめに */
+            padding: 10px 16px;
+            border-radius: 4px; /* 四角く */
+            font-size: 14px; /* 小さく */
             cursor: pointer;
             z-index: 20;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-            backdrop-filter: blur(5px);
+            box-shadow: 0 0 5px rgba(0, 136, 204, 0.2); /* 影を弱く */
+            backdrop-filter: blur(3px);
+            transition: 0.3s;
+        }
+        #settings-toggle:hover {
+             background: rgba(10, 15, 30, 0.8);
+             color: #00f0ff;
+             border-color: #00f0ff;
         }
 
         .panel {
@@ -61,23 +67,6 @@
             backdrop-filter: blur(5px);
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
-        
-        #close-panel-btn {
-            display: none;
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            background: #0a0f1e;
-            color: #b0c4de;
-            border: 1px solid #b0c4de;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: bold;
-            position: sticky;
-            top: -10px;
-            z-index: 100;
-        }
 
         .panel::-webkit-scrollbar {
             width: 6px;
@@ -86,28 +75,44 @@
             background: #00f0ff;
             border-radius: 3px;
         }
-        #btn {
+        
+        /* 四角いボタンの共通スタイル */
+        .square-btn {
             display: block;
             width: 100%;
             padding: 14px;
             font-size: 16px;
-            background: #00a8ff;
             color: white;
             border: none;
-            border-radius: 25px;
+            border-radius: 4px; /* 四角化 */
             cursor: pointer;
-            margin-bottom: 15px;
-            box-shadow: 0 0 15px rgba(0, 168, 255, 0.5);
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-            transition: 0.3s;
+            margin-bottom: 10px;
             font-weight: bold;
             letter-spacing: 1px;
+            transition: 0.3s;
+        }
+
+        #btn {
+            background: #00a8ff;
+            box-shadow: 0 0 15px rgba(0, 168, 255, 0.5);
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
         }
         #btn:hover {
             background: #00f0ff;
             box-shadow: 0 0 25px rgba(0, 240, 255, 0.8);
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
+        
+        #close-btn {
+            background: #2a3b5c;
+            box-shadow: 0 0 10px rgba(42, 59, 92, 0.5);
+            color: #b0c4de;
+        }
+        #close-btn:hover {
+            background: #3f5888;
+            color: white;
+        }
+
         .panel h3 {
             margin-top: 0;
             margin-bottom: 15px;
@@ -184,9 +189,6 @@
             #settings-toggle {
                 display: block;
             }
-            #close-panel-btn {
-                display: block;
-            }
             .panel {
                 top: auto;
                 bottom: 0;
@@ -222,8 +224,9 @@
     <button id="settings-toggle">きめる</button>
 
     <div class="panel" id="control-panel">
-        <button id="close-panel-btn">とじる</button>
-        <button id="btn">はじめる</button>
+        <!-- ボタンを四角く統一 -->
+        <button id="btn" class="square-btn">はじめる</button>
+        <button id="close-btn" class="square-btn">とじる</button>
         
         <canvas id="waveformCanvas" width="280" height="60"></canvas>
         
@@ -294,6 +297,15 @@
                 <span class="value-display" id="smallParticleCountVal">10</span>
             </div>
         </div>
+        
+        <!-- 中サイズの粒子追加 -->
+        <div class="control-group">
+            <label>中くらいの粒子の数 (中音)</label>
+            <div class="control-row">
+                <input type="range" id="mediumParticleCount" min="0" max="100" step="1" value="5">
+                <span class="value-display" id="mediumParticleCountVal">5</span>
+            </div>
+        </div>
 
         <div class="control-group">
             <label>大きい粒子の数 (低音)</label>
@@ -353,6 +365,14 @@
                 <input type="color" id="colorHigh" value="#00ffff">
             </div>
         </div>
+        
+        <!-- 中サイズのカラー追加 -->
+        <div class="control-group">
+            <label>中音のカラー（中くらいの粒子）</label>
+            <div class="control-row">
+                <input type="color" id="colorMid" value="#00ffaa">
+            </div>
+        </div>
 
         <div class="control-group">
             <label>低音のカラー（大きい粒子）</label>
@@ -367,6 +387,7 @@
             BOUNDARY_SHAPE: 'circle',
             BOUNDARY_SIZE: 260,       
             SMALL_PARTICLE_COUNT: 10,
+            MEDIUM_PARTICLE_COUNT: 5, // 中サイズ追加
             LARGE_PARTICLE_COUNT: 10,
             MIN_RADIUS: 4,  
             MAX_RADIUS: 18, 
@@ -380,6 +401,7 @@
             OCTAVES: 3,     
             SOUND_DURATION: 0.70,
             COLOR_HIGH: '#00ffff',
+            COLOR_MID: '#00ffaa', // 中サイズ追加
             COLOR_LOW: '#0055ff'
         };
 
@@ -416,7 +438,7 @@
         const btn = document.getElementById('btn');
         const settingsToggle = document.getElementById('settings-toggle');
         const panel = document.getElementById('control-panel');
-        const closePanelBtn = document.getElementById('close-panel-btn');
+        const closeBtn = document.getElementById('close-btn');
         
         const waveCanvas = document.getElementById('waveformCanvas');
         const waveCtx = waveCanvas.getContext('2d');
@@ -437,7 +459,6 @@
             centerX = canvas.width / 2;
             centerY = canvas.height / 2;
 
-            // スマホ画面幅に合わせて枠の大きさを自動調整する安全なロジックを追加
             if (canvas.width > 0 && canvas.height > 0) {
                 const minDimension = Math.min(canvas.width, canvas.height);
                 const safeMaxBoundary = Math.max(50, Math.floor((minDimension / 2) - 20));
@@ -459,7 +480,7 @@
             }
         }
         window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('load', resizeCanvas); // 初期化のタイミング遅れを防ぐため追加
+        window.addEventListener('load', resizeCanvas); 
         resizeCanvas();
 
         function hexToRgb(hex) {
@@ -470,13 +491,25 @@
                 b: parseInt(result[3], 16)
             } : { r: 0, g: 0, b: 0 };
         }
-
-        function interpolateColor(color1, color2, factor) {
-            const c1 = hexToRgb(color1);
-            const c2 = hexToRgb(color2);
-            const r = Math.round(c1.r + factor * (c2.r - c1.r));
-            const g = Math.round(c1.g + factor * (c2.g - c1.g));
-            const b = Math.round(c1.b + factor * (c2.b - c1.b));
+        
+        // 3色補間用に修正
+        function interpolateColorMid(colorHigh, colorMid, colorLow, factor) {
+            let c1, c2, f;
+            if (factor < 0.5) {
+                // 小さい〜中くらい (factor: 0 ~ 0.5)
+                c1 = hexToRgb(colorHigh);
+                c2 = hexToRgb(colorMid);
+                f = factor * 2;
+            } else {
+                // 中くらい〜大きい (factor: 0.5 ~ 1.0)
+                c1 = hexToRgb(colorMid);
+                c2 = hexToRgb(colorLow);
+                f = (factor - 0.5) * 2;
+            }
+            
+            const r = Math.round(c1.r + f * (c2.r - c1.r));
+            const g = Math.round(c1.g + f * (c2.g - c1.g));
+            const b = Math.round(c1.b + f * (c2.b - c1.b));
             return `rgb(${r}, ${g}, ${b})`;
         }
 
@@ -495,10 +528,13 @@
 
         class Particle {
             constructor(x, y, type) {
+                const midRadius = (CONFIG.MAX_RADIUS + CONFIG.MIN_RADIUS) / 2;
                 if (type === 'small') {
-                    this.r = CONFIG.MIN_RADIUS + Math.random() * 4; 
+                    this.r = CONFIG.MIN_RADIUS + Math.random() * (midRadius - CONFIG.MIN_RADIUS) * 0.8; 
+                } else if (type === 'medium') {
+                    this.r = midRadius + (Math.random() - 0.5) * 4;
                 } else {
-                    this.r = CONFIG.MAX_RADIUS - Math.random() * 6; 
+                    this.r = midRadius + Math.random() * (CONFIG.MAX_RADIUS - midRadius); 
                 }
                 
                 this.x = x;
@@ -595,7 +631,7 @@
             }
 
             draw() {
-                const color = interpolateColor(CONFIG.COLOR_HIGH, CONFIG.COLOR_LOW, this.factor);
+                const color = interpolateColorMid(CONFIG.COLOR_HIGH, CONFIG.COLOR_MID, CONFIG.COLOR_LOW, this.factor);
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
                 ctx.fillStyle = this.isColliding ? '#ffffff' : color;
@@ -704,6 +740,7 @@
         function setupParticles() {
             particles.length = 0;
             
+            // 小サイズ
             for (let i = 0; i < CONFIG.SMALL_PARTICLE_COUNT; i++) {
                 let x, y;
                 if (CONFIG.BOUNDARY_SHAPE === 'none') {
@@ -717,7 +754,21 @@
                 }
                 particles.push(new Particle(x, y, 'small'));
             }
-            
+            // 中サイズ
+            for (let i = 0; i < CONFIG.MEDIUM_PARTICLE_COUNT; i++) {
+                let x, y;
+                if (CONFIG.BOUNDARY_SHAPE === 'none') {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() * canvas.height;
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.random() * (CONFIG.BOUNDARY_SIZE - 20);
+                    x = centerX + r * Math.cos(angle);
+                    y = centerY + r * Math.sin(angle);
+                }
+                particles.push(new Particle(x, y, 'medium'));
+            }
+            // 大サイズ
             for (let i = 0; i < CONFIG.LARGE_PARTICLE_COUNT; i++) {
                 let x, y;
                 if (CONFIG.BOUNDARY_SHAPE === 'none') {
@@ -774,13 +825,12 @@
                     ctx.rect(centerX - CONFIG.BOUNDARY_SIZE, centerY - CONFIG.BOUNDARY_SIZE, CONFIG.BOUNDARY_SIZE * 2, CONFIG.BOUNDARY_SIZE * 2);
                 }
                 
-                // ★ 修正：枠線を太く・明るくしてネオン発光を追加（見えづらさを解消）
                 ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
                 ctx.lineWidth = 1;
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = 'rgba(0, 240, 255, 0.8)';
                 ctx.stroke();
-                ctx.shadowBlur = 0; // リセット
+                ctx.shadowBlur = 0; 
             }
 
             handleParticleCollisions();
@@ -800,7 +850,7 @@
             settingsToggle.style.display = 'none'; 
         });
 
-        closePanelBtn.addEventListener('click', () => {
+        closeBtn.addEventListener('click', () => {
             panel.classList.remove('show');
             setTimeout(() => {
                 settingsToggle.style.display = 'block'; 
@@ -839,6 +889,12 @@
         document.getElementById('smallParticleCount').addEventListener('input', (e) => {
             CONFIG.SMALL_PARTICLE_COUNT = parseInt(e.target.value);
             document.getElementById('smallParticleCountVal').textContent = e.target.value;
+            setupParticles();
+        });
+        
+        document.getElementById('mediumParticleCount').addEventListener('input', (e) => {
+            CONFIG.MEDIUM_PARTICLE_COUNT = parseInt(e.target.value);
+            document.getElementById('mediumParticleCountVal').textContent = e.target.value;
             setupParticles();
         });
 
@@ -880,6 +936,7 @@
         });
 
         document.getElementById('colorHigh').addEventListener('input', (e) => CONFIG.COLOR_HIGH = e.target.value);
+        document.getElementById('colorMid').addEventListener('input', (e) => CONFIG.COLOR_MID = e.target.value);
         document.getElementById('colorLow').addEventListener('input', (e) => CONFIG.COLOR_LOW = e.target.value);
 
         btn.addEventListener('click', () => {
