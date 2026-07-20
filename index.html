@@ -380,21 +380,29 @@
         <div class="separator"></div>
 
         <div class="control-group">
-            <label>高音のカラー（小さい粒子）</label>
+            <label>色の混ざり方</label>
+            <select id="colorMode">
+                <option value="gradient" selected>グラデーション</option>
+                <option value="solid">ソリッド</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>小さい粒子</label>
             <div class="control-row">
                 <input type="color" id="colorHigh" value="#00ffff">
             </div>
         </div>
         
         <div class="control-group">
-            <label>中音のカラー（中くらいの粒子）</label>
+            <label>中くらいの粒子</label>
             <div class="control-row">
                 <input type="color" id="colorMid" value="#00ffaa">
             </div>
         </div>
 
         <div class="control-group">
-            <label>低音のカラー（大きい粒子）</label>
+            <label>大きい粒子</label>
             <div class="control-row">
                 <input type="color" id="colorLow" value="#0055ff">
             </div>
@@ -421,20 +429,21 @@
             SOUND_DURATION: 0.70,
             COLOR_HIGH: '#00ffff',
             COLOR_MID: '#00ffaa', 
-            COLOR_LOW: '#0055ff'
+            COLOR_LOW: '#0055ff',
+            COLOR_MODE: 'gradient'
         };
 
         const SCALES = {
             major: [0, 2, 4, 5, 7, 9, 11],
             minor: [0, 2, 3, 5, 7, 8, 10],
             pentatonic: [0, 2, 4, 7, 9],
-            blues: [0, 3, 5, 6, 7, 10], // ブルーノート（マイナーブルース）
-            mode: [0, 2, 3, 5, 7, 9, 10], // モード（代表的なドリアンスケール）
-            prometheus: [0, 2, 4, 6, 9, 10], // プロメテウス音階
-            doubleHarmonic: [0, 1, 4, 5, 7, 8, 11], // ダブルハーモニック（エキゾチックな響き）
-            wholeTone: [0, 2, 4, 6, 8, 10], // ホールトーン（全音音階）
+            blues: [0, 3, 5, 6, 7, 10], 
+            mode: [0, 2, 3, 5, 7, 9, 10], 
+            prometheus: [0, 2, 4, 6, 9, 10], 
+            doubleHarmonic: [0, 1, 4, 5, 7, 8, 11], 
+            wholeTone: [0, 2, 4, 6, 8, 10], 
             ryukyu: [0, 4, 5, 7, 11],
-            miyako: [0, 1, 5, 7, 8], // 都節（より本格的な和風の響きへ修正）
+            miyako: [0, 1, 5, 7, 8], 
             continuous: null
         };
 
@@ -542,6 +551,8 @@
                     this.r = midRadius + Math.random() * (CONFIG.MAX_RADIUS - midRadius); 
                 }
                 this.x = x; this.y = y;
+                this.type = type; 
+                this.vx = (Math.random() - 0.5) * 4 * CONFIG.SPEED_MULTIPLIER;
                 this.vx = (Math.random() - 0.5) * 4 * CONFIG.SPEED_MULTIPLIER;
                 this.vy = (Math.random() - 0.5) * 4 * CONFIG.SPEED_MULTIPLIER;
                 this.mass = this.r; 
@@ -589,7 +600,21 @@
                 }
             }
             draw() {
-                const color = interpolateColorMid(CONFIG.COLOR_HIGH, CONFIG.COLOR_MID, CONFIG.COLOR_LOW, this.factor);
+               let color;
+                if (CONFIG.COLOR_MODE === 'gradient') {
+                    
+                    color = interpolateColorMid(CONFIG.COLOR_HIGH, CONFIG.COLOR_MID, CONFIG.COLOR_LOW, this.factor);
+                } else {
+                    
+                    if (this.type === 'small') {
+                        color = CONFIG.COLOR_HIGH;
+                    } else if (this.type === 'medium') {
+                        color = CONFIG.COLOR_MID;
+                    } else {
+                        color = CONFIG.COLOR_LOW;
+                    }
+                }
+
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
                 ctx.fillStyle = this.isColliding ? '#ffffff' : color;
@@ -684,10 +709,10 @@
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, now);
                 
-                // LFOでビブラート（音の揺れ）を作る
+                
                 lfo.type = 'sine';
-                lfo.frequency.setValueAtTime(6, now); // 6Hzの揺れ
-                lfoGain.gain.setValueAtTime(freq * 0.02, now); // 揺れの深さ
+                lfo.frequency.setValueAtTime(6, now); 
+                lfoGain.gain.setValueAtTime(freq * 0.02, now); 
                 lfo.connect(lfoGain).connect(osc.frequency);
 
                 gain.gain.setValueAtTime(0, now);
@@ -704,11 +729,11 @@
                 osc1.type = 'sine'; osc2.type = 'sine';
                 
                 osc1.frequency.setValueAtTime(freq, now);
-                osc2.frequency.setValueAtTime(freq * 3.16, now); // 硬い倍音
+                osc2.frequency.setValueAtTime(freq * 3.16, now); 
 
                 gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(volume, now + 0.002); // 非常に鋭いアタック
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + CONFIG.SOUND_DURATION * 0.4); // 短い減衰
+                gain.gain.linearRampToValueAtTime(volume, now + 0.002); 
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + CONFIG.SOUND_DURATION * 0.4); 
 
                 osc1.connect(gain).connect(outputNode);
                 osc2.connect(gain).connect(outputNode);
@@ -720,7 +745,7 @@
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
                 
-                // 打撃感を出すためのピッチエンベロープ（一瞬だけ音程を下げる）
+                
                 osc.frequency.setValueAtTime(freq * 1.5, now);
                 osc.frequency.exponentialRampToValueAtTime(freq, now + 0.02);
 
@@ -737,11 +762,11 @@
                 const gain = audioCtx.createGain();
                 osc.type = 'sawtooth';
                 
-                // 周波数をランダムにジャンプさせる
+                
                 osc.frequency.setValueAtTime(freq, now);
                 osc.frequency.setValueAtTime(freq * (0.5 + Math.random()), now + 0.04);
                 
-                // 音をブツ切りにする
+                
                 gain.gain.setValueAtTime(volume, now);
                 gain.gain.setValueAtTime(0, now + 0.02);
                 gain.gain.setValueAtTime(volume * 0.8, now + 0.03);
@@ -761,7 +786,7 @@
 
                 gain.gain.setValueAtTime(0, now);
                 gain.gain.linearRampToValueAtTime(volume * 0.6, now + 0.005);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); // ガラスの鋭さと脆さ
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15); 
 
                 osc1.connect(gain).connect(outputNode);
                 osc2.connect(gain).connect(outputNode);
@@ -787,26 +812,26 @@
                 const masterKotoGain = audioCtx.createGain();
                 const attackGain = audioCtx.createGain();
                 
-                // 1. 弦の太い響き（ベース）＝ 三角波
+                
                 osc1.type = 'triangle';
                 osc1.frequency.setValueAtTime(freq, now);
                 
-                // 2. 爪で弾いた時の擦れ音（アタック）＝ 鋸歯状波（1オクターブ上）
+                
                 osc2.type = 'sawtooth';
                 osc2.frequency.setValueAtTime(freq * 2, now);
 
-                // 全体の音量コントロール（極めて鋭い立ち上がりと、自然な減衰）
+                
                 masterKotoGain.gain.setValueAtTime(0, now);
                 masterKotoGain.gain.linearRampToValueAtTime(volume, now + 0.002);
                 masterKotoGain.gain.exponentialRampToValueAtTime(0.0001, now + CONFIG.SOUND_DURATION);
 
-                // 爪のアタック音は一瞬（0.1秒）で消えるようにする
+                
                 attackGain.gain.setValueAtTime(0.4, now);
                 attackGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
 
-                // 接続ルーティング
-                osc1.connect(masterKotoGain); // 弦のベース音はそのまま全体ゲインへ
-                osc2.connect(attackGain).connect(masterKotoGain); // アタック音は一瞬で消えるゲインを通ってから全体ゲインへ
+                
+                osc1.connect(masterKotoGain); 
+                osc2.connect(attackGain).connect(masterKotoGain); 
                 masterKotoGain.connect(outputNode);
 
                 osc1.start(); osc2.start();
@@ -874,10 +899,14 @@
                 ctx.beginPath();
                 if (CONFIG.BOUNDARY_SHAPE === 'circle') ctx.arc(centerX, centerY, CONFIG.BOUNDARY_SIZE, 0, Math.PI * 2);
                 else if (CONFIG.BOUNDARY_SHAPE === 'square') ctx.rect(centerX - CONFIG.BOUNDARY_SIZE, centerY - CONFIG.BOUNDARY_SIZE, CONFIG.BOUNDARY_SIZE * 2, CONFIG.BOUNDARY_SIZE * 2);
-                ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
-                ctx.lineWidth = 1;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = 'rgba(0, 240, 255, 0.8)';
+                
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; 
+                ctx.lineWidth = 0.8;                          
+                ctx.shadowBlur = 15;                          
+                ctx.shadowColor = '#00ffff';                  
+                
+                
                 ctx.stroke();
                 ctx.shadowBlur = 0; 
             }
@@ -926,6 +955,9 @@
         document.getElementById('colorHigh').addEventListener('input', (e) => CONFIG.COLOR_HIGH = e.target.value);
         document.getElementById('colorMid').addEventListener('input', (e) => CONFIG.COLOR_MID = e.target.value);
         document.getElementById('colorLow').addEventListener('input', (e) => CONFIG.COLOR_LOW = e.target.value);
+        document.getElementById('colorMode').addEventListener('change', (e) => {
+            CONFIG.COLOR_MODE = e.target.value;
+        });
 
         btn.addEventListener('click', () => {
             if (!audioCtx) { initAudio(); setupParticles(); }
